@@ -22,12 +22,20 @@ type Variables struct {
 var instance *Variables
 var once sync.Once
 
+func getEnvWithDefault(key, defaultValue string) string {
+	value := os.Getenv(key)
+	if value == "" {
+		return defaultValue
+	}
+	return value
+}
+
 func loadValues() {
 	instance = &Variables{
 		Debug:                    os.Getenv("APPLICATION_DEBUG") == "true",
-		KafkaHost:                os.Getenv("APPLICATION_KAFKA_HOST"),
-		KafkaPort:                os.Getenv("APPLICATION_KAFKA_PORT"),
-		KafkaTopic:               os.Getenv("APPLICATION_KAFKA_TOPIC"),
+		KafkaHost:                getEnvWithDefault("APPLICATION_KAFKA_HOST", "localhost"),
+		KafkaPort:                getEnvWithDefault("APPLICATION_KAFKA_PORT", "9092"),
+		KafkaTopic:               getEnvWithDefault("APPLICATION_KAFKA_TOPIC", "video-reencode-test"),
 		BlobConnectString:        os.Getenv("AZURE_BLOB_CONNECTION_STRING"),
 		VideoContainerName:       os.Getenv("VIDEO_CONTAINER_NAME"),
 		TranscodingMaxRetry:      3,

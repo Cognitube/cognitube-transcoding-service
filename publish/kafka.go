@@ -54,7 +54,7 @@ func (p *KafkaPublisher) PublishProd(topic string, message []byte) error {
 func (p *KafkaPublisher) Publish(topic string, message []byte) error {
 	log.Println("Try publish message to Kafka: " + string(message))
 
-	if env.GetInstance().Debug {
+	if !env.GetInstance().Debug {
 		return p.PublishProd(topic, message)
 	}
 
