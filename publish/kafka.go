@@ -23,7 +23,6 @@ func (p *KafkaPublisher) PublishProd(topic string, message []byte) error {
 	connectionString := env.GetInstance().EventHubConnectionString
 	username := env.GetInstance().Username
 
-	log.Print(username, connectionString, eventHubNamespace, topic)
 	// Set up SASL configuration
 	mechanism := plain.Mechanism{
 		Username: username,

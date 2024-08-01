@@ -3,11 +3,13 @@ package server
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"os"
 	"os/exec"
+	"strconv"
 
 	"cognitube.com/transcoding-service/azure"
 	"cognitube.com/transcoding-service/env"
@@ -38,12 +40,13 @@ func (c *CongnitubeTranscodingService) processVidAsync(videoID string, url strin
 	success := false
 	var err error
 	var resultURL string
+	var duration float64
 	var rslt *result.Result
 
 	log.Println("Transcoding video with ID:", videoID)
 
 	for retry < env.GetInstance().TranscodingMaxRetry {
-		resultURL, err = c.processVideo(url)
+		duration, resultURL, err = c.processVideo(url)
 		if err != nil {
 			retry += 1
 			log.Printf("Error while transcoding video: %v. Retrying...", err)
@@ -56,17 +59,19 @@ func (c *CongnitubeTranscodingService) processVidAsync(videoID string, url strin
 
 	if success {
 		rslt = &result.Result{
-			VideoID:  videoID,
-			VideoURL: resultURL,
-			Success:  true,
-			Error:    "",
+			VideoID:       videoID,
+			VideoDuration: duration,
+			VideoURL:      resultURL,
+			Success:       true,
+			Error:         "",
 		}
 	} else {
 		rslt = &result.Result{
-			VideoID:  videoID,
-			VideoURL: "",
-			Success:  false,
-			Error:    err.Error(),
+			VideoID:       videoID,
+			VideoURL:      "",
+			VideoDuration: 0,
+			Success:       false,
+			Error:         err.Error(),
 		}
 	}
 
@@ -80,16 +85,16 @@ func (c *CongnitubeTranscodingService) TranscodeVideo(videoID string, url string
 	go c.processVidAsync(videoID, url)
 }
 
-func (c *CongnitubeTranscodingService) processVideo(url string) (string, error) {
+func (c *CongnitubeTranscodingService) processVideo(url string) (float64, string, error) {
 	bytes, err := c.blobClient.DownloadFromBlob(url)
 	if err != nil {
-		return "", err
+		return 0, "", err
 	}
 
 	srcFile, err := os.CreateTemp("", "temp-")
 	if err != nil {
 		log.Println("Error while creating temp file:", err.Error())
-		return "", err
+		return 0, "", err
 	}
 	defer srcFile.Close()
 	defer os.Remove(srcFile.Name())
@@ -97,13 +102,13 @@ func (c *CongnitubeTranscodingService) processVideo(url string) (string, error) 
 	_, err = srcFile.Write(bytes)
 	if err != nil {
 		log.Println("Error while writing to temp file:", err.Error())
-		return "", err
+		return 0, "", err
 	}
 
 	targetFile, err := os.CreateTemp("", "processed-*.mp4")
 	if err != nil {
 		log.Println("Error while creating temp file:", err.Error())
-		return "", err
+		return 0, "", err
 	}
 	defer targetFile.Close()
 	defer os.Remove(targetFile.Name())
@@ -130,7 +135,7 @@ func (c *CongnitubeTranscodingService) processVideo(url string) (string, error) 
 
 	if err := cmd.Run(); err != nil {
 		log.Println("ffmpeg command failed:", err.Error())
-		return "", err
+		return 0, "", err
 	}
 
 	log.Println("ffmpeg command executed successfully")
@@ -138,22 +143,48 @@ func (c *CongnitubeTranscodingService) processVideo(url string) (string, error) 
 	data, err := io.ReadAll(targetFile)
 	if err != nil {
 		log.Println("failed to read file:", err.Error())
-		return "", err
+		return 0, "", err
 	}
 
 	blobURL, err := c.blobClient.UploadBlob(env.GetInstance().VideoContainerName, generateRandomFilename("processed-"), data)
 	if err != nil {
 		log.Println("failed to upload file:", err)
-		return "", err
+		return 0, "", err
 	}
 
 	shortURL, err := c.blobClient.ExtractContainerAndBlob(blobURL)
 	if err != nil {
 		log.Println("failed to extract container and blob:", err)
-		return "", err
+		return 0, "", err
 	}
 
-	return shortURL, nil
+	duration, err := getVideoDuration(targetFile.Name())
+	if err != nil {
+		log.Println("failed to get video duration:", err)
+		return 0, "", err
+	}
+
+	return duration, shortURL, nil
+}
+
+func getVideoDuration(filename string) (float64, error) {
+	cmd := exec.Command("ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "json", filename)
+	out, err := cmd.Output()
+	if err != nil {
+		return 0, err
+	}
+
+	var ffprobeOutput FFProbeOutput
+	if err := json.Unmarshal(out, &ffprobeOutput); err != nil {
+		return 0, err
+	}
+
+	duration, err := strconv.ParseFloat(ffprobeOutput.Format.Duration, 64)
+	if err != nil {
+		return 0, err
+	}
+
+	return duration, nil
 }
 
 func generateRandomFilename(prefix string) string {
