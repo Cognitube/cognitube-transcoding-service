@@ -35,13 +35,23 @@ func NewCognitubeTranscodingService() ICognitubeTranscodingService {
 	}
 }
 
-func (c *CongnitubeTranscodingService) processVidAsync(videoID string, url string) {
+func (c *CongnitubeTranscodingService) hasAudio(file os.File) (bool, error) {
+	cmd := exec.Command("ffprobe", "-v", "error", "-select_streams", "a:0", "-show_entries", "stream=codec_name", "-of", "default=noprint_wrappers=1:nokey=1", file.Name())
+	out, err := cmd.Output()
+	if err != nil {
+		return false, err
+	}
+
+	return string(out) != "", nil
+}
+
+func (c *CongnitubeTranscodingService) processVidAsync(videoID string, url string, retryCount int) {
 	retry := -1
 	success := false
 	var err error
 	var resultURL string
 	var duration float64
-	var rslt *result.Result
+	var rslt *result.TranscodingResult
 
 	log.Println("Transcoding video with ID:", videoID)
 
@@ -58,20 +68,22 @@ func (c *CongnitubeTranscodingService) processVidAsync(videoID string, url strin
 	}
 
 	if success {
-		rslt = &result.Result{
+		rslt = &result.TranscodingResult{
 			VideoID:       videoID,
 			VideoDuration: duration,
 			VideoURL:      resultURL,
 			Success:       true,
 			Error:         "",
+			RetryCount:    retryCount,
 		}
 	} else {
-		rslt = &result.Result{
+		rslt = &result.TranscodingResult{
 			VideoID:       videoID,
 			VideoURL:      "",
 			VideoDuration: 0,
 			Success:       false,
 			Error:         err.Error(),
+			RetryCount:    retryCount,
 		}
 	}
 
@@ -79,10 +91,146 @@ func (c *CongnitubeTranscodingService) processVidAsync(videoID string, url strin
 	if err != nil {
 		log.Println("failed to publish result:", err)
 	}
+
+	log.Println("Transcoding video with ID:", videoID, "completed")
 }
 
-func (c *CongnitubeTranscodingService) TranscodeVideo(videoID string, url string) {
-	go c.processVidAsync(videoID, url)
+func (c *CongnitubeTranscodingService) extractAudio(url string) (string, error) {
+	bytes, err := c.blobClient.DownloadFromBlob(url)
+	if err != nil {
+		log.Println("failed to download file:", err)
+		return "", err
+	}
+
+	srcFile, err := os.CreateTemp("", "temp-")
+	if err != nil {
+		log.Println("Error while creating temp file:", err.Error())
+		return "", err
+	}
+	defer srcFile.Close()
+	defer os.Remove(srcFile.Name())
+
+	_, err = srcFile.Write(bytes)
+	if err != nil {
+		log.Println("Error while writing to temp file:", err.Error())
+		return "", err
+	}
+
+	videoHasAudio, err := c.hasAudio(*srcFile)
+	if err != nil {
+		log.Println("Error while checking if video has audio:", err.Error())
+		return "", err
+	}
+
+	if !videoHasAudio {
+		return "", fmt.Errorf("Video does not contain an audio track")
+	}
+
+	targetFile, err := os.CreateTemp("", "audio-*.oga")
+	if err != nil {
+		log.Println("Error while creating temp file:", err.Error())
+		return "", err
+	}
+	defer targetFile.Close()
+	defer os.Remove(targetFile.Name())
+
+	command := []string{
+		"ffmpeg",
+		"-y",                 // -y: 无询问覆盖输出文件
+		"-i", srcFile.Name(), // -i: 输入文件路径
+		"-vn",             // -vn: 不包含视频流
+		"-c:a", "libopus", // -c:a: 音频编解码器，使用 Opus
+		"-b:a", env.GetInstance().AudioBitRate + "k", // -b:a: 音频比特率
+		"-ac", "1", // -ac: 音频通道，设置音频通道数为 1 (单声道)
+		"-ar", env.GetInstance().AudioSamplingRate, // -ar: 音频采样率
+		"-threads", "0", // -threads: 自动确定使用的线程数
+		targetFile.Name(), // 输出文件路径
+	}
+
+	cmd := exec.Command(command[0], command[1:]...)
+
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Run(); err != nil {
+		log.Println("ffmpeg command failed:", err.Error())
+		return "", err
+	}
+
+	log.Println("ffmpeg command executed successfully")
+
+	data, err := io.ReadAll(targetFile)
+	if err != nil {
+		log.Println("failed to read file:", err.Error())
+		return "", err
+	}
+
+	blobURL, err := c.blobClient.UploadBlob(env.GetInstance().AudioContainerName, generateRandomFilename("audio-"), data)
+	if err != nil {
+		log.Println("failed to upload file:", err)
+		return "", err
+	}
+
+	return blobURL, nil
+}
+
+func (c *CongnitubeTranscodingService) extractVidAudioAsync(videoID string, url string, retryCount int) {
+	retry := -1
+	success := false
+	var err error
+	var resultURL string
+	var rslt *result.AudioExtractionResult
+
+	log.Println("Extracting audio for video with ID:", videoID)
+
+	for retry < env.GetInstance().TranscodingMaxRetry {
+		resultURL, err = c.extractAudio(url)
+		if err != nil {
+			if err.Error() == "Video does not contain an audio track" {
+				log.Println("Video does not contain an audio track. Skipping keyword extraction.")
+				break
+			}
+			retry += 1
+			log.Printf("Error while extracting audio for video: %v. Retrying...", err)
+			continue
+		}
+
+		success = true
+		break
+	}
+
+	if success {
+		rslt = &result.AudioExtractionResult{
+			VideoID:    videoID,
+			AudioURL:   resultURL,
+			Success:    true,
+			Error:      "",
+			RetryCount: retryCount,
+		}
+	} else {
+		rslt = &result.AudioExtractionResult{
+			VideoID:    videoID,
+			AudioURL:   "",
+			Success:    false,
+			Error:      err.Error(),
+			RetryCount: retryCount,
+		}
+	}
+
+	err = c.resultPublisher.PublishAudioExtractionResult(rslt)
+	if err != nil {
+		log.Println("failed to publish result:", err)
+	}
+
+	log.Println("Audio extraction for video with ID:", videoID, "completed")
+}
+
+func (c *CongnitubeTranscodingService) ExtractAudio(videoID string, url string, retryCount int) {
+	go c.extractVidAudioAsync(videoID, url, retryCount)
+}
+
+func (c *CongnitubeTranscodingService) TranscodeVideo(videoID string, url string, retryCount int) {
+	go c.processVidAsync(videoID, url, retryCount)
 }
 
 func (c *CongnitubeTranscodingService) processVideo(url string) (float64, string, error) {

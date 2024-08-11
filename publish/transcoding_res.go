@@ -8,15 +8,22 @@ import (
 )
 
 type TranscodingPublisher interface {
-	PublishTranscodingResult(result *result.Result) error
+	PublishTranscodingResult(result *result.TranscodingResult) error
+	PublishAudioExtractionResult(result *result.AudioExtractionResult) error
 }
 type KafkaTranscodingPublisher struct {
 	KafkaPublisher
 }
 
-func (p *KafkaTranscodingPublisher) PublishTranscodingResult(result *result.Result) error {
+func (p *KafkaTranscodingPublisher) PublishTranscodingResult(result *result.TranscodingResult) error {
 	msg, _ := json.Marshal(result)
-	topic := env.GetInstance().KafkaTopic
+	topic := env.GetInstance().KafkaTranscodingTopic
+	return p.Publish(topic, msg)
+}
+
+func (p *KafkaTranscodingPublisher) PublishAudioExtractionResult(result *result.AudioExtractionResult) error {
+	msg, _ := json.Marshal(result)
+	topic := env.GetInstance().KafkaAudioExtractionTopic
 	return p.Publish(topic, msg)
 }
 
