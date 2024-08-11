@@ -138,7 +138,7 @@ func (c *CongnitubeTranscodingService) extractAudio(url string) (string, error) 
 		"-i", srcFile.Name(), // -i: 输入文件路径
 		"-vn",             // -vn: 不包含视频流
 		"-c:a", "libopus", // -c:a: 音频编解码器，使用 Opus
-		"-b:a", env.GetInstance().AudioBitRate, "k", // -b:a: 音频比特率
+		"-b:a", env.GetInstance().AudioBitRate + "k", // -b:a: 音频比特率
 		"-ac", "1", // -ac: 音频通道，设置音频通道数为 1 (单声道)
 		"-ar", env.GetInstance().AudioSamplingRate, // -ar: 音频采样率
 		"-threads", "0", // -threads: 自动确定使用的线程数
