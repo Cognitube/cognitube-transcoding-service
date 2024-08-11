@@ -6,6 +6,7 @@ type TranscodingResult struct {
 	VideoID       string  `json:"videoId"`
 	VideoURL      string  `json:"videoUrl"`
 	VideoDuration float64 `json:"videoDuration"`
+	RetryCount    int     `json:"retryCount"`
 }
 
 type AudioExtractionResult struct {

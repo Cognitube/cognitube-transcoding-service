@@ -45,7 +45,7 @@ func (c *CongnitubeTranscodingService) hasAudio(file os.File) (bool, error) {
 	return string(out) != "", nil
 }
 
-func (c *CongnitubeTranscodingService) processVidAsync(videoID string, url string) {
+func (c *CongnitubeTranscodingService) processVidAsync(videoID string, url string, retryCount int) {
 	retry := -1
 	success := false
 	var err error
@@ -74,6 +74,7 @@ func (c *CongnitubeTranscodingService) processVidAsync(videoID string, url strin
 			VideoURL:      resultURL,
 			Success:       true,
 			Error:         "",
+			RetryCount:    retryCount,
 		}
 	} else {
 		rslt = &result.TranscodingResult{
@@ -82,6 +83,7 @@ func (c *CongnitubeTranscodingService) processVidAsync(videoID string, url strin
 			VideoDuration: 0,
 			Success:       false,
 			Error:         err.Error(),
+			RetryCount:    retryCount,
 		}
 	}
 
@@ -172,7 +174,7 @@ func (c *CongnitubeTranscodingService) extractAudio(url string) (string, error) 
 	return blobURL, nil
 }
 
-func (c *CongnitubeTranscodingService) extractVidAudioAsync(videoID string, url string) {
+func (c *CongnitubeTranscodingService) extractVidAudioAsync(videoID string, url string, retryCount int) {
 	retry := -1
 	success := false
 	var err error
@@ -203,7 +205,7 @@ func (c *CongnitubeTranscodingService) extractVidAudioAsync(videoID string, url 
 			AudioURL:   resultURL,
 			Success:    true,
 			Error:      "",
-			RetryCount: 0,
+			RetryCount: retryCount,
 		}
 	} else {
 		rslt = &result.AudioExtractionResult{
@@ -211,7 +213,7 @@ func (c *CongnitubeTranscodingService) extractVidAudioAsync(videoID string, url 
 			AudioURL:   "",
 			Success:    false,
 			Error:      err.Error(),
-			RetryCount: 0,
+			RetryCount: retryCount,
 		}
 	}
 
@@ -223,12 +225,12 @@ func (c *CongnitubeTranscodingService) extractVidAudioAsync(videoID string, url 
 	log.Println("Audio extraction for video with ID:", videoID, "completed")
 }
 
-func (c *CongnitubeTranscodingService) ExtractAudio(videoID string, url string) {
-	go c.extractVidAudioAsync(videoID, url)
+func (c *CongnitubeTranscodingService) ExtractAudio(videoID string, url string, retryCount int) {
+	go c.extractVidAudioAsync(videoID, url, retryCount)
 }
 
-func (c *CongnitubeTranscodingService) TranscodeVideo(videoID string, url string) {
-	go c.processVidAsync(videoID, url)
+func (c *CongnitubeTranscodingService) TranscodeVideo(videoID string, url string, retryCount int) {
+	go c.processVidAsync(videoID, url, retryCount)
 }
 
 func (c *CongnitubeTranscodingService) processVideo(url string) (float64, string, error) {

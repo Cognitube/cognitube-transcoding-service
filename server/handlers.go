@@ -26,8 +26,9 @@ func Home(w http.ResponseWriter, r *http.Request) {
 
 func (t *TranscodingHandler) ExtractAudio(w http.ResponseWriter, r *http.Request) {
 	var reqData struct {
-		VideoID  string `json:"videoId"`
-		VideoURL string `json:"videoUrl"`
+		VideoID    string `json:"videoId"`
+		VideoURL   string `json:"videoUrl"`
+		RetryCount int    `json:"retryCount"`
 	}
 
 	body, err := io.ReadAll(r.Body)
@@ -46,7 +47,7 @@ func (t *TranscodingHandler) ExtractAudio(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	t.Service.ExtractAudio(reqData.VideoID, reqData.VideoURL)
+	t.Service.ExtractAudio(reqData.VideoID, reqData.VideoURL, reqData.RetryCount)
 
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Extracting audio"))
@@ -54,8 +55,9 @@ func (t *TranscodingHandler) ExtractAudio(w http.ResponseWriter, r *http.Request
 
 func (t *TranscodingHandler) Transcode(w http.ResponseWriter, r *http.Request) {
 	var reqData struct {
-		VideoID  string `json:"videoId"`
-		VideoURL string `json:"videoUrl"`
+		VideoID    string `json:"videoId"`
+		VideoURL   string `json:"videoUrl"`
+		RetryCount int    `json:"retryCount"`
 	}
 
 	body, err := io.ReadAll(r.Body)
@@ -74,7 +76,7 @@ func (t *TranscodingHandler) Transcode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	t.Service.TranscodeVideo(reqData.VideoID, reqData.VideoURL)
+	t.Service.TranscodeVideo(reqData.VideoID, reqData.VideoURL, reqData.RetryCount)
 
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Transcoding"))
