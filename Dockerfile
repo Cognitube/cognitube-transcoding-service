@@ -38,11 +38,15 @@ COPY --from=builder /app/myapp .
 ENV PORT=9032
 ENV APPLICATION_KAFKA_HOST=cognitube-kafka.servicebus.windows.net
 ENV APPLICATION_KAFKA_PORT=9093
-ENV APPLICATION_KAFKA_TOPIC=video-reencode
+ENV APPLICATION_KAFKA_TRANSCODING_TOPIC=video-reencode
+ENV APPLICATION_KAFKA_AUDIO_EXTRACTION_TOPIC=video-audio-extraction
 ENV KAFKA_EVENTHUB_NAMESPACE=cognitube-kafka
 ENV KAFKA_EVENTHUB_NAME=cognitube
 ENV KAFKA_USERNAME=\$ConnectionString
 ENV VIDEO_CONTAINER_NAME=video-container
+ENV AUDIO_CONTAINER_NAME=audio-container
+ENV AUDIO_SAMPLING_RATE=8000
+ENV AUDIO_BIT_RATE=16
 ENV AZURE_BLOB_CONNECTION_STRING="DefaultEndpointsProtocol=https;AccountName=cognitube;AccountKey=a1XDmr4IlO9I/tcsuh1akTaGFgmp+nQEoQdA8SlFpmmn7Zi0HKeDMk3ntxWjGI/HMFpQjzBys2ZX+AStqYVfsg==;EndpointSuffix=core.windows.net"
 ENV KAFKA_EVENTHUB_CONNECTION_STRING="Endpoint=sb://cognitube-kafka.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=l9+PMVbv8R4LuCtQlPo5x8PIE8jZqn8O4+AEhEMQoqA="
 
