@@ -23,7 +23,7 @@ func (p *KafkaTranscodingPublisher) PublishTranscodingResult(result *result.Tran
 
 func (p *KafkaTranscodingPublisher) PublishAudioExtractionResult(result *result.AudioExtractionResult) error {
 	msg, _ := json.Marshal(result)
-	topic := env.GetInstance().KafkaTranscodingTopic
+	topic := env.GetInstance().KafkaAudioExtractionTopic
 	return p.Publish(topic, msg)
 }
 
