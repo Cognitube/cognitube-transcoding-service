@@ -25,7 +25,7 @@ func (c *CongitubeTranscodingServer) StartListening(port string) {
 	http.ListenAndServe(":"+port, router)
 }
 
-func NewCongitubeTranscodingServer() WebServer {
+func NewCognitubeTranscodingServer() WebServer {
 	return &CongitubeTranscodingServer{
 		TranscodingService: NewCognitubeTranscodingService(),
 	}

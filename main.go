@@ -12,6 +12,6 @@ func main() {
 		port = "9032"
 	}
 
-	transcodingServer := server.NewCongitubeTranscodingServer()
+	transcodingServer := server.NewCognitubeTranscodingServer()
 	transcodingServer.StartListening(port)
 }
