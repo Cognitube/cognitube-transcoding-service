@@ -22,6 +22,7 @@ type Variables struct {
 	AudioExtractionMaxRetry   int
 	AudioSamplingRate         string
 	AudioBitRate              string
+	KafkaBootstrapServers     string
 }
 
 var instance *Variables
@@ -53,6 +54,7 @@ func loadValues() {
 		AudioExtractionMaxRetry:   3,
 		AudioSamplingRate:         getEnvWithDefault("AUDIO_SAMPLING_RATE", "8000"),
 		AudioBitRate:              getEnvWithDefault("AUDIO_BIT_RATE", "16"),
+		KafkaBootstrapServers:     os.Getenv("KAFKA_BOOTSTRAP_SERVERS"),
 	}
 }
 
