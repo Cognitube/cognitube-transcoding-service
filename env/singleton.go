@@ -49,7 +49,7 @@ func loadValues() {
 		EventHubNamespace:         getEnvWithDefault("KAFKA_EVENTHUB_NAMESPACE", ""),
 		EventHubName:              getEnvWithDefault("KAFKA_EVENTHUB_NAME", ""),
 		EventHubConnectionString:  getEnvWithDefault("AZURE_EVENTHUB_CONNECTIONSTRING", ""),
-		Username:                  getEnvWithDefault("KAFKA_USERNAME", ""),
+		Username:                  getEnvWithDefault("KAFKA_EVENTHUB_USERNAME", ""),
 		AudioContainerName:        os.Getenv("AUDIO_CONTAINER_NAME"),
 		AudioExtractionMaxRetry:   3,
 		AudioSamplingRate:         getEnvWithDefault("AUDIO_SAMPLING_RATE", "8000"),
