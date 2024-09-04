@@ -15,7 +15,6 @@ type Variables struct {
 	VideoContainerName        string
 	TranscodingMaxRetry       int
 	EventHubNamespace         string
-	EventHubName              string
 	EventHubConnectionString  string
 	Username                  string
 	AudioContainerName        string
@@ -47,7 +46,6 @@ func loadValues() {
 		VideoContainerName:        os.Getenv("VIDEO_CONTAINER_NAME"),
 		TranscodingMaxRetry:       3,
 		EventHubNamespace:         getEnvWithDefault("KAFKA_EVENTHUB_NAMESPACE", ""),
-		EventHubName:              getEnvWithDefault("KAFKA_EVENTHUB_NAME", ""),
 		EventHubConnectionString:  getEnvWithDefault("AZURE_EVENTHUB_CONNECTIONSTRING", ""),
 		Username:                  getEnvWithDefault("KAFKA_EVENTHUB_USERNAME", ""),
 		AudioContainerName:        os.Getenv("AUDIO_CONTAINER_NAME"),
