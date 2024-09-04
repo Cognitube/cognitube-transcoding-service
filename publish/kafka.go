@@ -3,6 +3,7 @@ package publish
 import (
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"log"
 
 	"cognitube.com/transcoding-service/env"
@@ -36,15 +37,23 @@ func (p *KafkaPublisher) PublishProd(topic string, message []byte) error {
 		}
 		transport = kafka.Transport{
 			SASL: mechanism,
-			TLS:  &tls.Config{}, // Ensure TLS is configured for Azure Event Hubs
+			TLS: &tls.Config{
+				InsecureSkipVerify: false,
+			}, // Ensure TLS is configured for Azure Event Hubs
 		}
 	} else {
 		addr = bootstrapServers
 		// No SASL for local Kafka
 		transport = kafka.Transport{
-			TLS: nil, // No TLS for local Kafka (usually not needed)
+			TLS: &tls.Config{
+				InsecureSkipVerify: true,
+			}, // No TLS for local Kafka (usually not needed)
 		}
 	}
+
+	log.Println(eventHubNamespace, connectionString, username, bootstrapServers)
+	t, _ := json.Marshal(transport)
+	log.Println(string(t))
 
 	writer := &kafka.Writer{
 		Addr:      kafka.TCP(addr),
