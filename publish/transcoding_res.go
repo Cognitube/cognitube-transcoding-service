@@ -2,6 +2,7 @@ package publish
 
 import (
 	"encoding/json"
+	"log"
 
 	"cognitube.com/transcoding-service/env"
 	"cognitube.com/transcoding-service/result"
@@ -23,6 +24,7 @@ func (p *KafkaTranscodingPublisher) PublishTranscodingResult(result *result.Tran
 
 func (p *KafkaTranscodingPublisher) PublishAudioExtractionResult(result *result.AudioExtractionResult) error {
 	msg, _ := json.Marshal(result)
+	log.Println(string(msg))
 	topic := env.GetInstance().KafkaAudioExtractionTopic
 	return p.Publish(topic, msg)
 }

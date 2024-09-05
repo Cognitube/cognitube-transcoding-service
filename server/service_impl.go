@@ -220,6 +220,7 @@ func (c *CongnitubeTranscodingService) extractVidAudioAsync(videoID string, url 
 	err = c.resultPublisher.PublishAudioExtractionResult(rslt)
 	if err != nil {
 		log.Println("failed to publish result:", err)
+		return
 	}
 
 	log.Println("Audio extraction for video with ID:", videoID, "completed")
