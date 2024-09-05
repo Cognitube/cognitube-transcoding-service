@@ -25,11 +25,12 @@ func (p *KafkaPublisher) PublishProd(topic string, message []byte) error {
 	connectionString := env.GetInstance().EventHubConnectionString
 	username := env.GetInstance().Username
 	bootstrapServers := env.GetInstance().KafkaBootstrapServers
+	isLocal := eventHubNamespace == ""
 
 	var addr string
 	var transport kafka.Transport
 
-	if eventHubNamespace != "" {
+	if !isLocal {
 		addr = eventHubNamespace + ".servicebus.windows.net:9093"
 		// Set up SASL configuration for Event Hubs
 		mechanism := plain.Mechanism{
@@ -57,7 +58,7 @@ func (p *KafkaPublisher) PublishProd(topic string, message []byte) error {
 		Transport: &transport,
 	}
 
-	if eventHubNamespace == "" { // Only attempt topic creation in local Kafka setup
+	if isLocal { // Only attempt topic creation in local Kafka setup
 		err := createTopicIfNotExists(addr, topic)
 		if err != nil {
 			log.Printf("Failed to create topic %s: %s", topic, err)
