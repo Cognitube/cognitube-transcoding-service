@@ -4,6 +4,8 @@ import (
 	"context"
 	"crypto/tls"
 	"log"
+	"net"
+	"strconv"
 
 	"cognitube.com/transcoding-service/env"
 	"github.com/segmentio/kafka-go"
@@ -44,9 +46,7 @@ func (p *KafkaPublisher) PublishProd(topic string, message []byte) error {
 		addr = bootstrapServers
 		// No SASL for local Kafka
 		transport = kafka.Transport{
-			TLS: &tls.Config{
-				InsecureSkipVerify: true,
-			}, // No TLS for local Kafka (usually not needed)
+			TLS: nil, // No TLS for local Kafka (usually not needed)
 		}
 	}
 
@@ -56,6 +56,15 @@ func (p *KafkaPublisher) PublishProd(topic string, message []byte) error {
 		Balancer:  &kafka.LeastBytes{},
 		Transport: &transport,
 	}
+
+	if eventHubNamespace == "" { // Only attempt topic creation in local Kafka setup
+		err := createTopicIfNotExists(addr, topic)
+		if err != nil {
+			log.Printf("Failed to create topic %s: %s", topic, err)
+			return err
+		}
+	}
+
 	err := writer.WriteMessages(context.Background(),
 		kafka.Message{
 			Value: message,
@@ -67,6 +76,44 @@ func (p *KafkaPublisher) PublishProd(topic string, message []byte) error {
 	}
 
 	return err
+}
+
+func createTopicIfNotExists(addr string, topic string) error {
+	// Connect to Kafka broker
+	conn, err := kafka.Dial("tcp", addr)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	// Get controller information
+	controller, err := conn.Controller()
+	if err != nil {
+		return err
+	}
+
+	// Connect to controller to create topic
+	connController, err := kafka.Dial("tcp", net.JoinHostPort(controller.Host, strconv.Itoa(controller.Port)))
+	if err != nil {
+		return err
+	}
+	defer connController.Close()
+
+	// Define topic configuration
+	config := kafka.TopicConfig{
+		Topic:             topic,
+		NumPartitions:     1,
+		ReplicationFactor: 1,
+	}
+
+	// Create topic
+	err = connController.CreateTopics(config)
+	if err != nil {
+		return err
+	}
+
+	log.Printf("Created topic %s", topic)
+	return nil
 }
 
 func (p *KafkaPublisher) Publish(topic string, message []byte) error {
