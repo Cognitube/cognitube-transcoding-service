@@ -19,13 +19,14 @@ jobs:
             - name: Log in to Docker Hub
               uses: docker/login-action@v1
               with:
-                  username: ${{ secrets.DOCKER_USERNAME }}
-                  password: ${{ secrets.DOCKER_PASSWORD }}
+                  registry: ${{ secrets.AZURE_REGISTRY_NAME }}
+                  username: ${{ secrets.AZURE_REGISTRY_USERNAME }}
+                  password: ${{ secrets.AZURE_REGISTRY_PASSWORD }}
 
             - name: Fetch all image tags from Docker Hub
               id: fetch-tags
               run: |
-                  TAGS=$(docker buildx imagetools inspect haozhealexzhang/cognitube-transcoding-service --raw | jq -r '.manifests[] | select(.annotations."org.opencontainers.image.created" < "'$(date --date="1 month ago" --iso-8601=seconds)'") | .annotations."org.opencontainers.image.title"')
+                  TAGS=$(docker buildx imagetools inspect ${{ secrets.AZURE_REGISTRY_NAME }}/cognitube-transcoding-service --raw | jq -r '.manifests[] | select(.annotations."org.opencontainers.image.created" < "'$(date --date="1 month ago" --iso-8601=seconds)'") | .annotations."org.opencontainers.image.title"')
                   echo "::set-output name=old_tags::${TAGS}"
 
             - name: Remove old images
@@ -33,7 +34,7 @@ jobs:
                   for TAG in ${{ steps.fetch-tags.outputs.old_tags }}
                   do
                     if [[ "$TAG" != "latest" ]]; then
-                      docker rmi haozhealexzhang/cognitube-transcoding-service:$TAG
-                      docker push haozhealexzhang/cognitube-transcoding-service:$TAG
+                      docker rmi ${{ secrets.AZURE_REGISTRY_NAME }}/cognitube-transcoding-service:$TAG
+                      docker push ${{ secrets.AZURE_REGISTRY_NAME }}/cognitube-transcoding-service:$TAG
                     fi
                   done

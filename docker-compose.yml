@@ -1,5 +1,59 @@
 services:
-    web:
+    cognitube-transcoding-service:
         build: .
+        container_name: cognitube-transcoding-service
+        depends_on:
+            - redis
+            - kafka
+        environment:
+            KAFKA_BOOTSTRAP_SERVERS: kafka:9092
         ports:
-            - '9032:9032'
+            - "9032:9032"
+        restart: unless-stopped
+
+    redis:
+        image: redis:7.2.4-alpine
+        container_name: cognitube-redis
+        ports:
+            - "6379:6379"
+        volumes:
+            - redis_data:/data
+        restart: unless-stopped
+
+    zookeeper:
+        image: confluentinc/cp-zookeeper:latest
+        container_name: cognitube_zookeeper_local
+        environment:
+            ZOOKEEPER_CLIENT_PORT: 2181
+            ZOOKEEPER_TICK_TIME: 2000
+        ports:
+            - "2181:2181"
+        volumes:
+            - zookeeper_data:/var/lib/zookeeper/data
+        restart: unless-stopped
+
+    kafka:
+        image: confluentinc/cp-kafka:latest
+        container_name: cognitube_kafka_local
+        depends_on:
+            - zookeeper
+        environment:
+            KAFKA_BROKER_ID: 1
+            KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+            KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+            KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+            KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
+            KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+            KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+            KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+            KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+        ports:
+            - "9092:9092"
+        volumes:
+            - kafka_data:/var/lib/kafka/data
+        restart: unless-stopped
+
+volumes:
+    redis_data:
+    zookeeper_data:
+    kafka_data:

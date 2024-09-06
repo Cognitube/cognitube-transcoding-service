@@ -15,13 +15,13 @@ type Variables struct {
 	VideoContainerName        string
 	TranscodingMaxRetry       int
 	EventHubNamespace         string
-	EventHubName              string
 	EventHubConnectionString  string
 	Username                  string
 	AudioContainerName        string
 	AudioExtractionMaxRetry   int
 	AudioSamplingRate         string
 	AudioBitRate              string
+	KafkaBootstrapServers     string
 }
 
 var instance *Variables
@@ -40,19 +40,19 @@ func loadValues() {
 		Debug:                     os.Getenv("APPLICATION_DEBUG") == "true",
 		KafkaHost:                 getEnvWithDefault("APPLICATION_KAFKA_HOST", "localhost"),
 		KafkaPort:                 getEnvWithDefault("APPLICATION_KAFKA_PORT", "9092"),
-		KafkaTranscodingTopic:     getEnvWithDefault("APPLICATION_KAFKA_TRANSCODING_TOPIC", "video-reencode-test"),
-		KafkaAudioExtractionTopic: getEnvWithDefault("APPLICATION_KAFKA_AUDIO_EXTRACTION_TOPIC", "video-audio-extraction-test"),
+		KafkaTranscodingTopic:     getEnvWithDefault("APPLICATION_KAFKA_TRANSCODING_TOPIC", "video-reencode"),
+		KafkaAudioExtractionTopic: getEnvWithDefault("APPLICATION_KAFKA_AUDIO_EXTRACTION_TOPIC", "video-audio-extraction"),
 		BlobConnectString:         os.Getenv("AZURE_BLOB_CONNECTION_STRING"),
 		VideoContainerName:        os.Getenv("VIDEO_CONTAINER_NAME"),
 		TranscodingMaxRetry:       3,
-		EventHubNamespace:         os.Getenv("KAFKA_EVENTHUB_NAMESPACE"),
-		EventHubName:              os.Getenv("KAFKA_EVENTHUB_NAME"),
-		EventHubConnectionString:  os.Getenv("KAFKA_EVENTHUB_CONNECTION_STRING"),
-		Username:                  os.Getenv("KAFKA_USERNAME"),
+		EventHubNamespace:         getEnvWithDefault("KAFKA_EVENTHUB_NAMESPACE", ""),
+		EventHubConnectionString:  getEnvWithDefault("AZURE_EVENTHUB_CONNECTIONSTRING", ""),
+		Username:                  getEnvWithDefault("KAFKA_EVENTHUB_USERNAME", ""),
 		AudioContainerName:        os.Getenv("AUDIO_CONTAINER_NAME"),
 		AudioExtractionMaxRetry:   3,
 		AudioSamplingRate:         getEnvWithDefault("AUDIO_SAMPLING_RATE", "8000"),
 		AudioBitRate:              getEnvWithDefault("AUDIO_BIT_RATE", "16"),
+		KafkaBootstrapServers:     os.Getenv("KAFKA_BOOTSTRAP_SERVERS"),
 	}
 }
 
